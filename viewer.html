@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>360° 이미지 뷰어</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#171b22; --panel2:#1e242e; --line:#2a313c;
+    --fg:#e6e9ef; --muted:#9aa4b2; --accent:#4c9aff; --mark:#ffca3a; --mark2:#3a2e00;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font-family:"Segoe UI",system-ui,-apple-system,"Malgun Gothic",sans-serif;overflow:hidden}
+  #app{display:flex;flex-direction:column;height:100%}
+
+  header{display:flex;align-items:center;gap:12px;padding:10px 14px;
+    background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header .grow{flex:1 1 auto}
+  button{background:var(--panel2);color:var(--fg);border:1px solid var(--line);
+    border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer;white-space:nowrap}
+  button:hover{border-color:var(--accent)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#04101f;font-weight:600}
+  button.mark.on{background:var(--mark);border-color:var(--mark);color:#2a2200;font-weight:600}
+  .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;
+    padding:6px 12px;font-size:13px;color:var(--muted)}
+  .chip b{color:var(--fg)}
+  .name{font-size:13px;color:var(--muted);max-width:42vw;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .name b{color:var(--fg)}
+
+  #stage{position:relative;flex:1 1 auto;min-height:0;background:#000;overflow:hidden}
+  #glcanvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
+  #glcanvas.grabbing{cursor:grabbing}
+  #flatImg{position:absolute;inset:0;margin:auto;max-width:100%;max-height:100%;
+    display:none;object-fit:contain}
+  #empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:14px;color:var(--muted);text-align:center;padding:20px}
+  #empty h2{color:var(--fg);margin:0;font-weight:600}
+  .hint{position:absolute;left:12px;bottom:12px;background:rgba(0,0,0,.5);
+    padding:6px 10px;border-radius:8px;font-size:12px;color:#cfd6e0;pointer-events:none}
+  .navbtn{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:64px;
+    font-size:26px;background:rgba(20,24,30,.6);border:1px solid var(--line)}
+  #prev{left:12px} #next{right:12px}
+  .markedTag{position:absolute;right:12px;top:12px;background:var(--mark);color:#2a2200;
+    padding:6px 12px;border-radius:8px;font-size:13px;font-weight:700;display:none}
+
+  footer{background:var(--panel);border-top:1px solid var(--line);padding:8px}
+  #strip{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+  .thumb{position:relative;flex:0 0 auto;height:66px;border:2px solid transparent;
+    border-radius:6px;overflow:hidden;cursor:pointer;background:#000}
+  .thumb img{height:100%;display:block}
+  .thumb.active{border-color:var(--accent)}
+  .thumb.marked{border-color:var(--mark)}
+  .thumb .dot{position:absolute;top:3px;right:3px;width:12px;height:12px;border-radius:50%;
+    background:var(--mark);display:none;box-shadow:0 0 0 2px #000}
+  .thumb.marked .dot{display:block}
+  #strip::-webkit-scrollbar{height:10px}
+  #strip::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button id="openBtn" class="primary">📂 폴더 열기</button>
+    <button id="modeBtn" disabled title="F">평면/360 전환</button>
+    <button id="resetBtn" disabled title="R">시점 초기화</button>
+    <span class="name" id="nameChip"><b>—</b></span>
+    <span class="grow"></span>
+    <span class="chip" id="idxChip"><b>0</b> / 0</span>
+    <button id="markBtn" class="mark" disabled title="Space">☆ 골라내기</button>
+    <span class="chip" id="markChip">선택 <b>0</b></span>
+    <button id="clearBtn" disabled>선택 해제</button>
+    <button id="saveBtn" disabled>💾 선택 저장</button>
+  </header>
+
+  <div id="stage">
+    <canvas id="glcanvas"></canvas>
+    <img id="flatImg" alt="">
+    <button class="navbtn" id="prev">‹</button>
+    <button class="navbtn" id="next">›</button>
+    <div class="markedTag" id="markedTag">★ 선택됨</div>
+    <div class="hint" id="hint">드래그: 둘러보기 · 휠: 확대/축소 · ←/→: 이전/다음 · Space: 골라내기 · F: 평면/360 · R: 초기화</div>
+    <div id="empty">
+      <h2>360° 이미지 뷰어</h2>
+      <div>“📂 폴더 열기”로 이미지 폴더를 선택하세요.<br>
+      2:1 파노라마는 360°로, 그 외는 평면으로 표시됩니다.</div>
+    </div>
+  </div>
+
+  <footer><div id="strip"></div></footer>
+</div>
+
+<input type="file" id="fileInput" webkitdirectory directory multiple accept="image/*" style="display:none">
+
+<script>
+"use strict";
+
+// ---------- 상태 ----------
+const state = {
+  images: [],      // {file, url, name, width, height, is360, marked, thumb}
+  idx: -1,
+  yaw: 0, pitch: 0, fov: 90,   // 360 시점
+  tex: null, texKey: null,
+};
+const MIN_FOV = 30, MAX_FOV = 110;
+
+// ---------- DOM ----------
+const $ = id => document.getElementById(id);
+const canvas = $("glcanvas"), flatImg = $("flatImg");
+const els = {
+  open:$("openBtn"), file:$("fileInput"), mode:$("modeBtn"), reset:$("resetBtn"),
+  name:$("nameChip"), idx:$("idxChip"), mark:$("markBtn"), markChip:$("markChip"),
+  clear:$("clearBtn"), save:$("saveBtn"), prev:$("prev"), next:$("next"),
+  strip:$("strip"), empty:$("empty"), markedTag:$("markedTag"),
+};
+
+// ---------- WebGL ----------
+const gl = canvas.getContext("webgl", {antialias:true, preserveDrawingBuffer:false});
+let program, loc = {};
+function initGL(){
+  const vs = `
+    attribute vec2 aPos;
+    varying vec2 vPos;
+    void main(){ vPos = aPos; gl_Position = vec4(aPos,0.0,1.0); }`;
+  // equirectangular 파노라마를 화면 광선별로 역투영해 샘플링
+  const fs = `
+    precision highp float;
+    varying vec2 vPos;
+    uniform sampler2D uTex;
+    uniform float uYaw, uPitch, uFov, uAspect;
+    const float PI = 3.141592653589793;
+    void main(){
+      float t = tan(uFov * 0.5);
+      // 카메라 좌표 광선 (forward = -z)
+      vec3 dir = normalize(vec3(vPos.x * t * uAspect, vPos.y * t, -1.0));
+      // pitch(X축) 후 yaw(Y축) 회전
+      float cp = cos(uPitch), sp = sin(uPitch);
+      dir = vec3(dir.x, cp*dir.y - sp*dir.z, sp*dir.y + cp*dir.z);
+      float cy = cos(uYaw), sy = sin(uYaw);
+      dir = vec3(cy*dir.x + sy*dir.z, dir.y, -sy*dir.x + cy*dir.z);
+      // 방향 -> 경도/위도 -> equirect UV
+      float lon = atan(dir.x, -dir.z);
+      float lat = asin(clamp(dir.y, -1.0, 1.0));
+      vec2 uv = vec2(lon/(2.0*PI) + 0.5, 0.5 - lat/PI);
+      gl_FragColor = texture2D(uTex, uv);
+    }`;
+  program = link(vs, fs);
+  gl.useProgram(program);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const aPos = gl.getAttribLocation(program, "aPos");
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+  loc.yaw = gl.getUniformLocation(program,"uYaw");
+  loc.pitch = gl.getUniformLocation(program,"uPitch");
+  loc.fov = gl.getUniformLocation(program,"uFov");
+  loc.aspect = gl.getUniformLocation(program,"uAspect");
+}
+function link(vsrc, fsrc){
+  const c=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) throw gl.getShaderInfoLog(s); return s;};
+  const p=gl.createProgram();
+  gl.attachShader(p,c(gl.VERTEX_SHADER,vsrc));
+  gl.attachShader(p,c(gl.FRAGMENT_SHADER,fsrc));
+  gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS)) throw gl.getProgramInfoLog(p);
+  return p;
+}
+function uploadTexture(imgEl, key){
+  if(state.texKey === key) return;           // 같은 이미지면 재업로드 생략
+  if(!state.tex) state.tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, state.tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgEl);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  state.texKey = key;
+}
+function resizeGL(){
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  const w = Math.round(canvas.clientWidth*dpr), h = Math.round(canvas.clientHeight*dpr);
+  if(canvas.width!==w || canvas.height!==h){ canvas.width=w; canvas.height=h; }
+  gl.viewport(0,0,canvas.width,canvas.height);
+}
+let needRender = false;
+function requestRender(){ if(!needRender){ needRender=true; requestAnimationFrame(render); } }
+function render(){
+  needRender = false;
+  if(state.idx<0 || !current().is360 || !state.tex) return;
+  resizeGL();
+  gl.useProgram(program);
+  gl.uniform1f(loc.yaw, state.yaw);
+  gl.uniform1f(loc.pitch, state.pitch);
+  gl.uniform1f(loc.fov, state.fov*Math.PI/180);
+  gl.uniform1f(loc.aspect, canvas.width/canvas.height);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+// ---------- 헬퍼 ----------
+const current = () => state.images[state.idx];
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
+function loadImageEl(url){
+  return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im);
+    im.onerror=rej; im.src=url; });
+}
+
+// ---------- 폴더 로드 ----------
+els.open.onclick = ()=> els.file.click();
+els.file.onchange = async (e)=>{
+  const files = [...e.target.files]
+    .filter(f=>/\.(jpe?g|png|webp|bmp|gif)$/i.test(f.name))
+    .sort((a,b)=> (a.webkitRelativePath||a.name).localeCompare(
+                   b.webkitRelativePath||b.name, undefined, {numeric:true}));
+  // 기존 URL 해제
+  state.images.forEach(im=>{ URL.revokeObjectURL(im.url); if(im.thumb) URL.revokeObjectURL(im.thumb); });
+  state.images = files.map(f=>({
+    file:f, url:URL.createObjectURL(f), name:f.name,
+    width:0, height:0, is360:false, marked:false, thumb:null,
+  }));
+  state.idx = state.images.length? 0 : -1;
+  state.texKey = null;
+  buildStrip();
+  if(state.idx>=0) await show(0, true);
+  updateUI();
+  els.file.value = "";
+};
+
+// ---------- 표시 ----------
+async function show(i, resetView){
+  state.idx = clamp(i, 0, state.images.length-1);
+  const im = current();
+  const el = await loadImageEl(im.url);
+  if(!im.width){ im.width=el.naturalWidth; im.height=el.naturalHeight;
+    im.is360 = Math.abs(im.width/im.height - 2) <= 0.12; }  // 2:1 ±6% -> 360
+  if(resetView) resetViewParams();
+  applyMode(el);
+  markActiveThumb();
+  updateUI();
+}
+function resetViewParams(){ state.yaw=0; state.pitch=0; state.fov=90; }
+
+function applyMode(el){
+  const im = current();
+  if(im.is360){
+    canvas.style.display="block"; flatImg.style.display="none";
+    uploadTexture(el, im.url);
+    requestRender();
+  }else{
+    canvas.style.display="none"; flatImg.style.display="block";
+    flatImg.src = im.url;
+  }
+}
+
+// ---------- 네비게이션 ----------
+async function go(delta){ if(!state.images.length) return;
+  await show((state.idx+delta+state.images.length)%state.images.length, false); }
+els.prev.onclick = ()=>go(-1);
+els.next.onclick = ()=>go(1);
+
+// ---------- 골라내기 ----------
+function toggleMark(){ const im=current(); if(!im) return;
+  im.marked=!im.marked; syncThumb(state.idx); updateUI(); }
+els.mark.onclick = toggleMark;
+els.clear.onclick = ()=>{ state.images.forEach((im,i)=>{ if(im.marked){im.marked=false;syncThumb(i);} });
+  updateUI(); };
+
+// ---------- 저장 ----------
+els.save.onclick = async ()=>{
+  const marked = state.images.filter(im=>im.marked);
+  if(!marked.length) return;
+  if(window.showDirectoryPicker){
+    let dir;
+    try{ dir = await window.showDirectoryPicker({mode:"readwrite"}); }
+    catch(err){ return; } // 취소
+    let ok=0;
+    for(const im of marked){
+      try{
+        const fh = await dir.getFileHandle(im.name, {create:true});
+        const w = await fh.createWritable();
+        await w.write(im.file); await w.close(); ok++;
+      }catch(err){ console.error("저장 실패", im.name, err); }
+    }
+    alert(`${ok} / ${marked.length}개 이미지를 폴더에 저장했습니다.`);
+  }else{
+    // 폴더 API 미지원 브라우저: 개별 다운로드
+    for(const im of marked){
+      const a=document.createElement("a"); a.href=im.url; a.download=im.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      await new Promise(r=>setTimeout(r,150));
+    }
+  }
+};
+
+// ---------- 썸네일 스트립 ----------
+function buildStrip(){
+  els.strip.innerHTML="";
+  state.images.forEach((im,i)=>{
+    const d=document.createElement("div"); d.className="thumb"; d.dataset.i=i;
+    const t=document.createElement("img"); t.loading="lazy"; t.src=im.url;
+    const dot=document.createElement("span"); dot.className="dot";
+    d.append(t,dot); d.onclick=()=>show(i,false);
+    els.strip.appendChild(d);
+  });
+  markActiveThumb();
+}
+function thumbAt(i){ return els.strip.children[i]; }
+function syncThumb(i){ const el=thumbAt(i); if(el) el.classList.toggle("marked", state.images[i].marked); }
+function markActiveThumb(){
+  [...els.strip.children].forEach((el,i)=> el.classList.toggle("active", i===state.idx));
+  const el=thumbAt(state.idx);
+  if(el) el.scrollIntoView({block:"nearest", inline:"center", behavior:"smooth"});
+}
+
+// ---------- UI 갱신 ----------
+function updateUI(){
+  const has = state.images.length>0, im=current();
+  els.empty.style.display = has? "none":"flex";
+  els.markedTag.style.display = (im&&im.marked)? "block":"none";
+  els.name.innerHTML = im? `<b>${im.name}</b> · ${im.width}×${im.height} ${im.is360?"· 360°":"· 평면"}` : "<b>—</b>";
+  els.idx.innerHTML = `<b>${has? state.idx+1:0}</b> / ${state.images.length}`;
+  const nMark = state.images.filter(x=>x.marked).length;
+  els.markChip.innerHTML = `선택 <b>${nMark}</b>`;
+  els.mark.textContent = (im&&im.marked)? "★ 선택됨":"☆ 골라내기";
+  els.mark.classList.toggle("on", !!(im&&im.marked));
+  [els.mode,els.reset,els.mark].forEach(b=>b.disabled=!has);
+  [els.prev,els.next].forEach(b=>b.disabled=state.images.length<2);
+  els.clear.disabled = els.save.disabled = nMark===0;
+}
+
+// ---------- 시점 조작 ----------
+els.mode.onclick = ()=>{ const im=current(); if(!im) return;
+  im.is360=!im.is360; loadImageEl(im.url).then(applyMode); updateUI(); };
+els.reset.onclick = ()=>{ resetViewParams(); requestRender(); };
+
+let dragging=false, lastX=0, lastY=0;
+canvas.addEventListener("pointerdown", e=>{ if(!current()||!current().is360) return;
+  dragging=true; lastX=e.clientX; lastY=e.clientY; canvas.classList.add("grabbing");
+  canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener("pointermove", e=>{ if(!dragging) return;
+  const k = state.fov/canvas.clientHeight * (Math.PI/180) * 1.1;
+  state.yaw   += (e.clientX-lastX)*k;
+  state.pitch  = clamp(state.pitch + (e.clientY-lastY)*k, -Math.PI/2+0.01, Math.PI/2-0.01);
+  lastX=e.clientX; lastY=e.clientY; requestRender(); });
+const endDrag = e=>{ dragging=false; canvas.classList.remove("grabbing"); };
+canvas.addEventListener("pointerup", endDrag);
+canvas.addEventListener("pointercancel", endDrag);
+canvas.addEventListener("wheel", e=>{ if(!current()||!current().is360) return;
+  e.preventDefault(); state.fov = clamp(state.fov + Math.sign(e.deltaY)*4, MIN_FOV, MAX_FOV);
+  requestRender(); }, {passive:false});
+
+// ---------- 키보드 ----------
+window.addEventListener("keydown", e=>{
+  if(e.key==="ArrowLeft"){ go(-1); }
+  else if(e.key==="ArrowRight"){ go(1); }
+  else if(e.key===" "){ e.preventDefault(); toggleMark(); }
+  else if(e.key==="f"||e.key==="F"){ els.mode.onclick(); }
+  else if(e.key==="r"||e.key==="R"){ els.reset.onclick(); }
+});
+
+window.addEventListener("resize", requestRender);
+initGL();
+updateUI();
+</script>
+</body>
+</html>

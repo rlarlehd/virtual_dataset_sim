@@ -1,0 +1,8 @@
+﻿# Python 코어 + FastAPI 브리지 + YOLOv8
+numpy>=1.24
+opencv-python>=4.8
+fastapi>=0.110
+uvicorn>=0.27
+python-multipart>=0.0.9      # /api/upload, /api/detect 파일 업로드
+pydantic>=2.5
+ultralytics>=8.3             # YOLOv8 (torch/torchvision 자동 설치)

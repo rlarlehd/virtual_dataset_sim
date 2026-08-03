@@ -1,0 +1,22 @@
+services:
+  app:
+    build: .
+    image: virtual-dataset:latest
+    container_name: virtual-dataset
+    ports:
+      # 호스트 8086 → 컨테이너 8086 (uvicorn 이 8086 에서 리슨). 접속: http://<서버IP>:8086
+      - "8086:8086"
+    volumes:
+      # 호스트 /data/datasets → 컨테이너 /data. 런타임 산출물(uploads/assets/projects/
+      # crops/msmt_out)과 맵(/data/maps)이 호스트 /data/datasets 에 영구 저장됨.
+      - /data/datasets/virtual_dataset:/data
+    environment:
+      APP_DATA_DIR: /data
+      APP_MAPS_DIR: /data/maps
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8086/api/health').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s

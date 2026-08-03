@@ -1,0 +1,176 @@
+{
+  "type": "vd-room-map",
+  "version": "1.0",
+  "image_id": null,
+  "layout": {
+    "footprint": [
+      [
+        0,
+        -26.8516
+      ],
+      [
+        -4.781,
+        -14.4598
+      ],
+      [
+        -2.1838,
+        -6.8904
+      ],
+      [
+        -3.8446,
+        -7.1395
+      ],
+      [
+        -7.0152,
+        -0.9629
+      ],
+      [
+        -26.1161,
+        -6.2414
+      ],
+      [
+        -35.2382,
+        3.1767
+      ],
+      [
+        -13.3125,
+        29.3545
+      ],
+      [
+        5.8709,
+        4.7978
+      ],
+      [
+        8.0487,
+        2.0293
+      ],
+      [
+        17.6302,
+        -13.0896
+      ],
+      [
+        44.882,
+        -52.55
+      ],
+      [
+        0,
+        -18.5686
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ],
+    "height": 5.8731,
+    "cameraHeight": 1.5
+  },
+  "textures": [
+    {
+      "name": "floor",
+      "url": "/api/asset/6f7214e1dbf0/floor.png"
+    },
+    {
+      "name": "ceiling",
+      "url": "/api/asset/6f7214e1dbf0/ceiling.png"
+    },
+    {
+      "name": "wall_0",
+      "url": "/api/asset/6f7214e1dbf0/wall_0.png"
+    },
+    {
+      "name": "wall_1",
+      "url": "/api/asset/6f7214e1dbf0/wall_1.png"
+    },
+    {
+      "name": "wall_2",
+      "url": "/api/asset/6f7214e1dbf0/wall_2.png"
+    },
+    {
+      "name": "wall_3",
+      "url": "/api/asset/6f7214e1dbf0/wall_3.png"
+    },
+    {
+      "name": "wall_4",
+      "url": "/api/asset/6f7214e1dbf0/wall_4.png"
+    },
+    {
+      "name": "wall_5",
+      "url": "/api/asset/6f7214e1dbf0/wall_5.png"
+    },
+    {
+      "name": "wall_6",
+      "url": "/api/asset/6f7214e1dbf0/wall_6.png"
+    },
+    {
+      "name": "wall_7",
+      "url": "/api/asset/6f7214e1dbf0/wall_7.png"
+    },
+    {
+      "name": "wall_8",
+      "url": "/api/asset/6f7214e1dbf0/wall_8.png"
+    },
+    {
+      "name": "wall_9",
+      "url": "/api/asset/6f7214e1dbf0/wall_9.png"
+    },
+    {
+      "name": "wall_10",
+      "url": "/api/asset/6f7214e1dbf0/wall_10.png"
+    },
+    {
+      "name": "wall_11",
+      "url": "/api/asset/6f7214e1dbf0/wall_11.png"
+    },
+    {
+      "name": "wall_12",
+      "url": "/api/asset/6f7214e1dbf0/wall_12.png"
+    },
+    {
+      "name": "wall_13",
+      "url": "/api/asset/6f7214e1dbf0/wall_13.png"
+    },
+    {
+      "name": "wall_14",
+      "url": "/api/asset/6f7214e1dbf0/wall_14.png"
+    }
+  ],
+  "faces": [
+    "floor",
+    "ceiling",
+    "wall_0",
+    "wall_1",
+    "wall_2",
+    "wall_3",
+    "wall_4",
+    "wall_5",
+    "wall_6",
+    "wall_7",
+    "wall_8",
+    "wall_9",
+    "wall_10",
+    "wall_11",
+    "wall_13"
+  ],
+  "floorFaces": [
+    "floor"
+  ],
+  "camera": {
+    "position": [
+      -0.27786597355384834,
+      3.980000000000002,
+      -0.6291785092617534
+    ],
+    "yawDeg": -237.5,
+    "pitchDeg": -43.5,
+    "rollDeg": 0,
+    "fovDeg": 75,
+    "width": 1280,
+    "height": 720
+  },
+  "paths": [],
+  "flipX": true
+}

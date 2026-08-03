@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node / 프론트 빌드
+web/node_modules/
+web/dist/
+
+# 런타임 산출물 (서버 로컬에 쌓임 — 배포물에 포함하지 않음)
+server/data/uploads/
+server/data/assets/
+server/data/projects/
+server/data/crops/
+server/data/msmt_out/
+
+# OS
+.DS_Store
+Thumbs.db
+# GLB
+glb/
+map_source/

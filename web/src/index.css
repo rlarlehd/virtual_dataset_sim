@@ -1,0 +1,2 @@
+/* 기본 리셋 — 실제 스타일은 App.css */
+html, body, #root { margin: 0; padding: 0; width: 100%; }

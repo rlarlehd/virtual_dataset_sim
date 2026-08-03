@@ -1,0 +1,36 @@
+# === 빌드 컨텍스트에서 제외 (이미지 크기/전송량 최소화) ===
+.git
+.gitignore
+
+# 대용량 에셋 — GLB 는 브라우저에서 파일선택으로 로드하므로 이미지에 불필요
+glb/
+generated/
+mpfb_generated_v2/
+map_source/
+animations/
+samples/
+docs/
+*.blend
+
+# 파이썬/노드 캐시·빌드물 (이미지 내부에서 새로 생성)
+__pycache__/
+*.pyc
+.venv/
+venv/
+web/node_modules/
+web/dist/
+
+# 런타임 산출물 (볼륨으로 마운트)
+server/data/uploads/
+server/data/assets/
+server/data/projects/
+server/data/crops/
+server/data/msmt_out/
+server/__pycache__/
+
+# 문서/스크립트 (런타임 불필요)
+viewer.html
+create_templates.py
+mpfb_random_generator_v2.py
+mpfb_asset_list*.csv
+화각/
