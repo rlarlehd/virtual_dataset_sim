@@ -28,6 +28,7 @@ MakeHuman/MPFB    →   업로드·경계·복원·bake   →   로스터 투입
 ```
 
 **맵 = 카메라.** 같은 신원을 여러 맵에 등장시키면 cross-camera ReID 쌍이 자동 생성됨.
+![실행영상](https://github.com/rlarlehd/virtual_dataset_sim/blob/main/images.gif)
 
 ---
 
@@ -39,7 +40,6 @@ MakeHuman/MPFB    →   업로드·경계·복원·bake   →   로스터 투입
 | `pid 1` · cam0 | `pid 1` · cam2 | `pid 2` · cam1 | `pid 2` · cam2 |
 |:---:|:---:|:---:|:---:|
 | <img src="docs/crops/0001_c00_f000138.jpg" height="120"> | <img src="docs/crops/0001_c02_f000268.jpg" height="120"> | <img src="docs/crops/0002_c01_f000129.jpg" height="120"> | <img src="docs/crops/0002_c02_f000269.jpg" height="120"> |
-![실행영상](https://github.com/rlarlehd/virtual_dataset_sim/blob/main/images.gif)
 ---
 
 ## 신원 GLB 생성 (MakeHuman / MPFB)
